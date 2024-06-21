@@ -15,11 +15,12 @@ function importCSVFromDrive() {
   // Parse the CSV data
   const data = CSVToArray(csvData);
 
-  // Insert 3 new coliumns for Euro converted rates
+  // Insert 3 new columns for Euro converted rates
   data.forEach(row => {
-    row.splice(11, 0, '');
-    row.splice(21, 0, '');
-    row.splice(23, 0, '');
+    row.splice(11, 0, ''); // SalePrice
+    row.splice(21, 0, ''); // VestFairMarketValue
+    row.splice(23, 0, ''); // Gross Proceeds
+    row.splice(24, 0, ''); // Gross Proceeds
   });
 
   const numColumns = data[0].length;
@@ -34,26 +35,54 @@ function importCSVFromDrive() {
     
     //repeat the date in first column
     if (row[0] != undefined) {
-      lastDateSeen = row[0];
+      // we are in a single date range here
+      lastDateSeen = row[0];      
     } else {
       row[0] = lastDateSeen;
     }
     
     // need a CSV with dividends to complete
     // if RSU Sale or ESPP Sale
-    if (row[8] == "RS" || row[8] == "ESPP") {
+    // column 10 always exists. not 21 and 22 (ESPP case)
+    if (row[8] == "RS" || row[8] == "ESPP") {    
+      
       //remove $ sign  
       row[10] = row[10].replace(/[^0-9.-]+/g, "");
-      row[20] = row[10].replace(/[^0-9.-]+/g, "");
-      row[22] = row[10].replace(/[^0-9.-]+/g, "");
       // replace dot with comma, use it if located in France
       row[10] = row[10].replace(/\./g, ",");
-      row[20] = row[10].replace(/\./g, ",");
-      row[22] = row[10].replace(/\./g, ",");
-       
-      row[11] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * K"+DateIdx;
+
+      //SubscriptionFairMarketValue      
+      if (row[13]) {
+        row[13] = row[13].replace(/[^0-9.-]+/g, "");
+        row[13] = row[13].replace(/\./g, ",");
+      }
+
+      //PurchasePrice
+      if (row[15]) {
+        row[15] = row[15].replace(/[^0-9.-]+/g, "");
+        row[15] = row[15].replace(/\./g, ",");
+      }
+
+      // VestFairMarketValue
+      if (row[20]) {
+        row[20] = row[20].replace(/[^0-9.-]+/g, "");
+        row[20] = row[20].replace(/\./g, ",");
+      }
+
+      // GrossProceeds
+      if (row[22]) {
+        row[22] = row[22].replace(/[^0-9.-]+/g, "");
+        row[22] = row[22].replace(/\./g, ",");
+      } 
+            
+      row[11] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * K"+DateIdx;    
       row[21] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * U"+DateIdx;
       row[23] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * W"+DateIdx;
+      
+      if (row[8] == "RS")
+        row[24] = "=X" + DateIdx + " - ( J" + DateIdx + " * V" + DateIdx + ")";
+      if (row[8] == "ESPP")
+        row[24] = "=X" + DateIdx + " - ( J" + DateIdx + " * P" + DateIdx + " * "+ "INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2))";
     }
 
     while (row.length < numColumns) {
@@ -73,9 +102,10 @@ function importCSVFromDrive() {
   sheet.getRange(1, 1, normalizedData.length, numColumns).setValues(normalizedData);
 
   // Add title to the new columns
-  sheet.getRange(1, 12).setValue('Euros');
-  sheet.getRange(1, 22).setValue('Euros');
-  sheet.getRange(1, 24).setValue('Euros');
+  sheet.getRange(1, 12).setValue('1 Share in Euros');
+  sheet.getRange(1, 22).setValue('VestFairMarketValue in Euros');
+  sheet.getRange(1, 24).setValue('Gross proceeds in Euros');
+  sheet.getRange(1, 25).setValue('Plus ou moins Value in Euros');
 }
 
 /**
