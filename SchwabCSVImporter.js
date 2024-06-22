@@ -1,6 +1,8 @@
-// this function takes a file input.csv that must be placed in your google drive folder.
+// This file can be used by people receiving ESPP and RSU in Europe (to ease tax process)
+//
+// It takes as input a file input.csv that must be placed in your google drive folder.
 // On Schwab site you can download a CSV file for a specific date range
-// It open the CSV, clean up numbers, add 3 columns and add the googlefinance formulas to get the converted rate.
+// It open the CSV, clean up numbers, add 3 columns and add the googlefinance formulas to get the converted rate (Euros).
 // the google finance function allows only the use of close with USDEUR pair, so I can't propose an optimised convertion rate with the lowest of the day.
 
 function importCSVFromDrive() {
@@ -17,10 +19,10 @@ function importCSVFromDrive() {
 
   // Insert 3 new columns for Euro converted rates
   data.forEach(row => {
-    row.splice(11, 0, ''); // SalePrice
-    row.splice(21, 0, ''); // VestFairMarketValue
-    row.splice(23, 0, ''); // Gross Proceeds
-    row.splice(24, 0, ''); // Gross Proceeds
+    row.splice(11, 0, ''); // SalePrice (converted)
+    row.splice(21, 0, ''); // VestFairMarketValue (converted)
+    row.splice(23, 0, ''); // Gross Proceeds (converted)
+    row.splice(24, 0, ''); // Capital gain and loss (converted)
   });
 
   const numColumns = data[0].length;
@@ -31,6 +33,7 @@ function importCSVFromDrive() {
   // index for date formula
   var DateIdx = 1;
 
+  // required as some cells can be empty
   const normalizedData = data.map(row=> { 
     
     //repeat the date in first column
@@ -42,8 +45,7 @@ function importCSVFromDrive() {
     }
     
     // need a CSV with dividends to complete
-    // if RSU Sale or ESPP Sale
-    // column 10 always exists. not 21 and 22 (ESPP case)
+    // if RSU Sale or ESPP Sale    
     if (row[8] == "RS" || row[8] == "ESPP") {    
       
       //remove $ sign  
@@ -74,11 +76,17 @@ function importCSVFromDrive() {
         row[22] = row[22].replace(/[^0-9.-]+/g, "");
         row[22] = row[22].replace(/\./g, ",");
       } 
-            
+
+      // SalePrice 
       row[11] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * K"+DateIdx;    
+
+      // VestFairMarketValue 
       row[21] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * U"+DateIdx;
+
+      // Gross Proceeds
       row[23] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * W"+DateIdx;
-      
+
+      // Capital gain and loss
       if (row[8] == "RS")
         row[24] = "=X" + DateIdx + " - ( J" + DateIdx + " * V" + DateIdx + ")";
       if (row[8] == "ESPP")
