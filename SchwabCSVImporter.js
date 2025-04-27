@@ -6,7 +6,7 @@
 // the google finance function allows only the use of close with USDEUR pair, so I can't propose an optimised convertion rate with the lowest of the day.
 
 function importCSVFromDrive() {
-  const fileId = 'input.csv';  // CSV file from Schwab site, to place in your google drive folder to import
+  const fileId = 'feuille2024.csv';  // CSV file from Schwab site, to place in your google drive folder to import
   const sheetName = 'Feuille 1';  // Replace with the name of the sheet where you want to import the data. This sheet must exist.
 
   // Get the CSV file from Google Drive
@@ -77,21 +77,30 @@ function importCSVFromDrive() {
         row[22] = row[22].replace(/\./g, ",");
       } 
 
-      // SalePrice 
+      // SalePrice in Euros
       row[11] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * K"+DateIdx;    
 
-      // VestFairMarketValue 
+      // VestFairMarketValue in Euros
       row[21] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * U"+DateIdx;
 
-      // Gross Proceeds
+      // Gross Proceeds in Euros
       row[23] = "=INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2) * W"+DateIdx;
 
       // Capital gain and loss
       if (row[8] == "RS")
         row[24] = "=X" + DateIdx + " - ( J" + DateIdx + " * V" + DateIdx + ")";
-      if (row[8] == "ESPP")
+      if (row[8] == "ESPP") //in euros
         row[24] = "=X" + DateIdx + " - ( J" + DateIdx + " * P" + DateIdx + " * "+ "INDEX(GOOGLEFINANCE(\"currency:USDEUR\";\"close\";DATE(RIGHT(A"+DateIdx+";4);LEFT(A"+DateIdx+";2);MID(A"+DateIdx+";4;2)));2;2))";
+
+
     }
+
+    // Clean Taxes columns except header
+    if (row[30] && row[30] != "Taxes") {
+        row[30] = row[30].replace(/[^0-9.-]+/g, "");
+        row[30] = row[30].replace(/\./g, ",");
+    }
+     
 
     while (row.length < numColumns) {
       row.push('');
